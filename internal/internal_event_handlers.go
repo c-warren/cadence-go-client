@@ -406,6 +406,7 @@ func (wc *workflowEnvironmentImpl) ExecuteChildWorkflow(
 	attributes.WorkflowType = workflowTypePtr(*params.workflowType)
 	attributes.WorkflowIdReusePolicy = params.workflowIDReusePolicy.toThriftPtr()
 	attributes.ParentClosePolicy = params.parentClosePolicy.toThriftPtr()
+	attributes.Priority = params.priority.toThriftPtr()
 	attributes.RetryPolicy = params.retryPolicy
 	attributes.Header = params.header
 	attributes.Memo = memo
@@ -561,7 +562,7 @@ func (wc *workflowEnvironmentImpl) Now() time.Time {
 	return wc.currentReplayTime
 }
 
-func (wc *workflowEnvironmentImpl) NewTimer(d time.Duration, callback resultHandler) *timerInfo {
+func (wc *workflowEnvironmentImpl) NewTimer(d time.Duration, priority Priority, callback resultHandler) *timerInfo {
 	durationInSeconds := common.Int64Ceil(d.Seconds())
 	if durationInSeconds < 0 {
 		callback(nil, fmt.Errorf("negative duration provided %v", durationInSeconds))
@@ -576,6 +577,7 @@ func (wc *workflowEnvironmentImpl) NewTimer(d time.Duration, callback resultHand
 	startTimerAttr := &m.StartTimerDecisionAttributes{}
 	startTimerAttr.TimerId = common.StringPtr(timerID)
 	startTimerAttr.StartToFireTimeoutSeconds = common.Int64Ptr(durationInSeconds)
+	startTimerAttr.Priority = priority.toThriftPtr()
 
 	decision := wc.decisionsHelper.startTimer(startTimerAttr)
 	decision.setData(&scheduledTimer{callback: callback})

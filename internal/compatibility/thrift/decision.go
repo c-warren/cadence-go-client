@@ -66,6 +66,7 @@ func Decision(d *apiv1.Decision) *shared.Decision {
 		decision.StartTimerDecisionAttributes = &shared.StartTimerDecisionAttributes{
 			TimerId:                   &a.TimerId,
 			StartToFireTimeoutSeconds: int32To64(durationToSeconds(a.StartToFireTimeout)),
+			Priority:                  TaskPriority(a.Priority),
 		}
 	case *apiv1.Decision_CompleteWorkflowExecutionDecisionAttributes:
 		decision.DecisionType = shared.DecisionTypeCompleteWorkflowExecution.Ptr()
@@ -160,6 +161,7 @@ func Decision(d *apiv1.Decision) *shared.Decision {
 			SearchAttributes:                    SearchAttributes(a.SearchAttributes),
 			CronOverlapPolicy:                   CronOverlapPolicy(a.CronOverlapPolicy),
 			ActiveClusterSelectionPolicy:        ActiveClusterSelectionPolicy(a.ActiveClusterSelectionPolicy),
+			Priority:                            TaskPriority(a.Priority),
 		}
 	case *apiv1.Decision_SignalExternalWorkflowExecutionDecisionAttributes:
 		decision.DecisionType = shared.DecisionTypeSignalExternalWorkflowExecution.Ptr()

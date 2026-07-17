@@ -47,7 +47,37 @@ type (
 	// WaitGroup is used to wait for a collection of
 	// coroutines to finish
 	WaitGroup = internal.WaitGroup
+
+	// Priority is a client hint about how latency-sensitive the tasks generated
+	// by a workflow decision (such as a timer or child workflow) are. Use
+	// PriorityAsync to opt into deprioritized ("async") execution by the server.
+	Priority = internal.Priority
+
+	// TimerOption is a functional option used to customize a timer created via
+	// NewTimer or Sleep.
+	TimerOption = internal.TimerOption
 )
+
+const (
+	// PriorityUnset leaves the priority unspecified (server default is used).
+	// This is the zero value and results in an omitted priority field.
+	PriorityUnset = internal.PriorityUnset
+	// PriorityHigh marks the task as latency-sensitive / high priority.
+	PriorityHigh = internal.PriorityHigh
+	// PriorityDefault marks the task with the default priority.
+	PriorityDefault = internal.PriorityDefault
+	// PriorityLow marks the task as low priority.
+	PriorityLow = internal.PriorityLow
+	// PriorityAsync marks the task as async, opting into deprioritized
+	// ("best effort") execution by the server.
+	PriorityAsync = internal.PriorityAsync
+)
+
+// WithPriority returns a TimerOption that sets the priority of a timer created
+// via NewTimer or Sleep.
+func WithPriority(priority Priority) TimerOption {
+	return internal.WithPriority(priority)
+}
 
 // Await blocks the calling thread until condition() returns true.
 // Do not mutate values or trigger side effects inside condition.
@@ -154,6 +184,15 @@ func NewTimer(ctx Context, d time.Duration) Future {
 	return internal.NewTimer(ctx, d)
 }
 
+// NewTimerWithOptions returns immediately and the future becomes ready after the specified duration d.
+// It behaves like NewTimer, but additionally accepts options such as workflow.WithPriority to customize
+// the timer, for example opting into deprioritized ("async") execution:
+//
+//	workflow.NewTimerWithOptions(ctx, d, workflow.WithPriority(workflow.PriorityAsync))
+func NewTimerWithOptions(ctx Context, d time.Duration, options ...TimerOption) Future {
+	return internal.NewTimerWithOptions(ctx, d, options...)
+}
+
 // Sleep pauses the current workflow for at least the duration d. A negative or zero duration causes Sleep to return
 // immediately. Workflow code needs to use this Sleep() to sleep instead of the Go lang library one(timer.Sleep()).
 // You can cancel the pending sleep by cancel the Context (using context from workflow.WithCancel(ctx)).
@@ -164,4 +203,13 @@ func NewTimer(ctx Context, d time.Duration) Future {
 // subjected to change in the future.
 func Sleep(ctx Context, d time.Duration) (err error) {
 	return internal.Sleep(ctx, d)
+}
+
+// SleepWithOptions pauses the current workflow for at least the duration d.
+// It behaves like Sleep, but additionally accepts options such as workflow.WithPriority to customize
+// the timer, for example opting into deprioritized ("async") execution:
+//
+//	workflow.SleepWithOptions(ctx, d, workflow.WithPriority(workflow.PriorityAsync))
+func SleepWithOptions(ctx Context, d time.Duration, options ...TimerOption) (err error) {
+	return internal.SleepWithOptions(ctx, d, options...)
 }

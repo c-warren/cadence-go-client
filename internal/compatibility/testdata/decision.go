@@ -166,10 +166,12 @@ var (
 		SearchAttributes:             &SearchAttributes,
 		CronOverlapPolicy:            apiv1.CronOverlapPolicy_CRON_OVERLAP_POLICY_SKIPPED,
 		ActiveClusterSelectionPolicy: ActiveClusterSelectionPolicy,
+		Priority:                     TaskPriority,
 	}
 	StartTimerDecisionAttributes = apiv1.StartTimerDecisionAttributes{
 		TimerId:            TimerID,
 		StartToFireTimeout: Duration1,
+		Priority:           TaskPriority,
 	}
 	UpsertWorkflowSearchAttributesDecisionAttributes = apiv1.UpsertWorkflowSearchAttributesDecisionAttributes{
 		SearchAttributes: &SearchAttributes,

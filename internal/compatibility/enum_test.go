@@ -179,6 +179,19 @@ func TestParentClosePolicy(t *testing.T) {
 	assert.Panics(t, func() { proto.ParentClosePolicy(shared.ParentClosePolicy(UnknownValue).Ptr()) })
 	assert.Panics(t, func() { thrift.ParentClosePolicy(apiv1.ParentClosePolicy(UnknownValue)) })
 }
+func TestTaskPriority(t *testing.T) {
+	for _, item := range []apiv1.TaskPriority{
+		apiv1.TaskPriority_TASK_PRIORITY_INVALID,
+		apiv1.TaskPriority_TASK_PRIORITY_HIGH,
+		apiv1.TaskPriority_TASK_PRIORITY_DEFAULT,
+		apiv1.TaskPriority_TASK_PRIORITY_LOW,
+		apiv1.TaskPriority_TASK_PRIORITY_ASYNC,
+	} {
+		assert.Equal(t, item, proto.TaskPriority(thrift.TaskPriority(item)))
+	}
+	assert.Panics(t, func() { proto.TaskPriority(shared.TaskPriority(UnknownValue).Ptr()) })
+	assert.Panics(t, func() { thrift.TaskPriority(apiv1.TaskPriority(UnknownValue)) })
+}
 func TestPendingActivityState(t *testing.T) {
 	for _, item := range []apiv1.PendingActivityState{
 		apiv1.PendingActivityState_PENDING_ACTIVITY_STATE_INVALID,

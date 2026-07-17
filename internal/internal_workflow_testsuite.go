@@ -1733,7 +1733,7 @@ func (env *testWorkflowEnvironmentImpl) newTimer(d time.Duration, callback resul
 	return timerInfo
 }
 
-func (env *testWorkflowEnvironmentImpl) NewTimer(d time.Duration, callback resultHandler) *timerInfo {
+func (env *testWorkflowEnvironmentImpl) NewTimer(d time.Duration, priority Priority, callback resultHandler) *timerInfo {
 	return env.newTimer(d, callback, true)
 }
 

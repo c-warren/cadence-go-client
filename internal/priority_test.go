@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2021 Uber Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,31 +21,32 @@
 package internal
 
 import (
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	s "go.uber.org/cadence/.gen/go/shared"
 )
 
-// All code in this file is private to the package.
+func TestResolveTimerOptions(t *testing.T) {
+	t.Run("no options leaves priority unset", func(t *testing.T) {
+		opts := resolveTimerOptions(nil)
+		assert.Equal(t, PriorityUnset, opts.priority)
+	})
+	t.Run("WithPriority sets the priority", func(t *testing.T) {
+		opts := resolveTimerOptions([]TimerOption{WithPriority(PriorityAsync)})
+		assert.Equal(t, PriorityAsync, opts.priority)
+	})
+	t.Run("last option wins", func(t *testing.T) {
+		opts := resolveTimerOptions([]TimerOption{WithPriority(PriorityHigh), WithPriority(PriorityLow)})
+		assert.Equal(t, PriorityLow, opts.priority)
+	})
+}
 
-type (
-	timerInfo struct {
-		timerID string
-	}
-
-	// workflowTimerClient wraps the async workflow timer functionality.
-	workflowTimerClient interface {
-
-		// Now - Current time when the decision task is started or replayed.
-		// the workflow need to use this for wall clock to make the flow logic deterministic.
-		Now() time.Time
-
-		// NewTimer - Creates a new timer that will fire callback after d(resolution is in seconds).
-		// The callback indicates the error(TimerCanceledError) if the timer is cancelled.
-		// priority is an optional hint about the latency-sensitivity of the timer task.
-		NewTimer(d time.Duration, priority Priority, callback resultHandler) *timerInfo
-
-		// RequestCancelTimer - Requests cancel of a timer, this one doesn't wait for cancellation request
-		// to complete, instead invokes the resultHandler with TimerCanceledError
-		// If the timer is not started then it is a no-operation.
-		RequestCancelTimer(timerID string)
-	}
-)
+func TestPriorityToThriftPtr(t *testing.T) {
+	assert.Nil(t, PriorityUnset.toThriftPtr())
+	assert.Equal(t, s.TaskPriorityHigh, *PriorityHigh.toThriftPtr())
+	assert.Equal(t, s.TaskPriorityDefault, *PriorityDefault.toThriftPtr())
+	assert.Equal(t, s.TaskPriorityLow, *PriorityLow.toThriftPtr())
+	assert.Equal(t, s.TaskPriorityAsync, *PriorityAsync.toThriftPtr())
+}

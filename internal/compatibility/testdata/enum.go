@@ -42,6 +42,7 @@ var (
 	SignalExternalWorkflowExecutionFailedCause = apiv1.SignalExternalWorkflowExecutionFailedCause_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION
 	TaskListKind                               = apiv1.TaskListKind_TASK_LIST_KIND_STICKY
 	TaskListType                               = apiv1.TaskListType_TASK_LIST_TYPE_ACTIVITY
+	TaskPriority                               = apiv1.TaskPriority_TASK_PRIORITY_ASYNC
 	TimeoutType                                = apiv1.TimeoutType_TIMEOUT_TYPE_SCHEDULE_TO_START
 	WorkflowExecutionCloseStatus               = apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_CONTINUED_AS_NEW
 	WorkflowIDReusePolicy                      = apiv1.WorkflowIdReusePolicy_WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING

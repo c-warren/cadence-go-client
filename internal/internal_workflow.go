@@ -190,6 +190,7 @@ type (
 		memo                                map[string]interface{}
 		searchAttributes                    map[string]interface{}
 		parentClosePolicy                   ParentClosePolicy
+		priority                            Priority
 		bugports                            Bugports
 	}
 
@@ -249,6 +250,7 @@ const (
 	workflowResultContextKey         = "workflowResult"
 	coroutinesContextKey             = "coroutines"
 	workflowEnvOptionsContextKey     = "wfEnvOptions"
+	timerPriorityContextKey          = "timerPriority"
 )
 
 // Assert that structs do indeed implement the interfaces

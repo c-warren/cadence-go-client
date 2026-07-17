@@ -166,6 +166,25 @@ func ParentClosePolicy(t *shared.ParentClosePolicy) apiv1.ParentClosePolicy {
 	panic("unexpected enum value")
 }
 
+func TaskPriority(t *shared.TaskPriority) apiv1.TaskPriority {
+	if t == nil {
+		return apiv1.TaskPriority_TASK_PRIORITY_INVALID
+	}
+	switch *t {
+	case shared.TaskPriorityInvalid:
+		return apiv1.TaskPriority_TASK_PRIORITY_INVALID
+	case shared.TaskPriorityHigh:
+		return apiv1.TaskPriority_TASK_PRIORITY_HIGH
+	case shared.TaskPriorityDefault:
+		return apiv1.TaskPriority_TASK_PRIORITY_DEFAULT
+	case shared.TaskPriorityLow:
+		return apiv1.TaskPriority_TASK_PRIORITY_LOW
+	case shared.TaskPriorityAsync:
+		return apiv1.TaskPriority_TASK_PRIORITY_ASYNC
+	}
+	panic("unexpected enum value")
+}
+
 func DecisionTaskFailedCause(t *shared.DecisionTaskFailedCause) apiv1.DecisionTaskFailedCause {
 	if t == nil {
 		return apiv1.DecisionTaskFailedCause_DECISION_TASK_FAILED_CAUSE_INVALID

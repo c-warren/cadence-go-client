@@ -1020,7 +1020,7 @@ func TestWorkflowExecutionEnvironment_NewTimer_immediate_calls(t *testing.T) {
 	t.Run("immediate call", func(t *testing.T) {
 		handler := testWorkflowExecutionEventHandler(t, newRegistry())
 		handlerCalled := false
-		res := handler.NewTimer(0, func(result []byte, err error) {
+		res := handler.NewTimer(0, PriorityUnset, func(result []byte, err error) {
 			assert.NoError(t, err)
 			handlerCalled = true
 		})
@@ -1030,7 +1030,7 @@ func TestWorkflowExecutionEnvironment_NewTimer_immediate_calls(t *testing.T) {
 	t.Run("negative duration", func(t *testing.T) {
 		handler := testWorkflowExecutionEventHandler(t, newRegistry())
 		handlerCalled := false
-		res := handler.NewTimer(-2*time.Second, func(result []byte, err error) {
+		res := handler.NewTimer(-2*time.Second, PriorityUnset, func(result []byte, err error) {
 			handlerCalled = true
 			assert.ErrorContains(t, err, "negative duration provided")
 		})
@@ -1039,11 +1039,94 @@ func TestWorkflowExecutionEnvironment_NewTimer_immediate_calls(t *testing.T) {
 	})
 	t.Run("timer cancellation", func(t *testing.T) {
 		handler := testWorkflowExecutionEventHandler(t, newRegistry())
-		timer := handler.NewTimer(time.Second, func(result []byte, err error) {
+		timer := handler.NewTimer(time.Second, PriorityUnset, func(result []byte, err error) {
 			assert.ErrorIs(t, err, ErrCanceled)
 		})
 		handler.RequestCancelTimer(timer.timerID)
 	})
+}
+
+func TestWorkflowExecutionEnvironment_NewTimer_Priority(t *testing.T) {
+	t.Run("async priority is threaded into StartTimer decision", func(t *testing.T) {
+		handler := testWorkflowExecutionEventHandler(t, newRegistry())
+		timer := handler.NewTimer(time.Minute, PriorityAsync, func(result []byte, err error) {})
+		require.NotNil(t, timer)
+
+		decisions := handler.decisionsHelper.getDecisions(false)
+		require.Len(t, decisions, 1)
+		attr := decisions[0].StartTimerDecisionAttributes
+		require.NotNil(t, attr)
+		require.NotNil(t, attr.Priority)
+		assert.Equal(t, s.TaskPriorityAsync, *attr.Priority)
+	})
+	t.Run("unset priority omits the field", func(t *testing.T) {
+		handler := testWorkflowExecutionEventHandler(t, newRegistry())
+		timer := handler.NewTimer(time.Minute, PriorityUnset, func(result []byte, err error) {})
+		require.NotNil(t, timer)
+
+		decisions := handler.decisionsHelper.getDecisions(false)
+		require.Len(t, decisions, 1)
+		attr := decisions[0].StartTimerDecisionAttributes
+		require.NotNil(t, attr)
+		assert.Nil(t, attr.Priority)
+	})
+}
+
+func TestNewTimerWithOptions_Priority(t *testing.T) {
+	runTimerWorkflow := func(t *testing.T, body func(ctx Context)) *workflowExecutionEventHandlerImpl {
+		handler := testWorkflowExecutionEventHandler(t, newRegistry())
+		env := handler.workflowEnvironmentImpl
+		interceptors, envInterceptor := newWorkflowInterceptors(env, env.GetWorkflowInterceptors())
+		d, _ := newDispatcher(newWorkflowContext(env, interceptors, envInterceptor), body)
+		require.NoError(t, d.ExecuteUntilAllBlocked())
+		return handler
+	}
+
+	t.Run("NewTimerWithOptions(WithPriority(Async)) sets async on the decision", func(t *testing.T) {
+		handler := runTimerWorkflow(t, func(ctx Context) {
+			NewTimerWithOptions(ctx, time.Minute, WithPriority(PriorityAsync))
+		})
+		decisions := handler.decisionsHelper.getDecisions(false)
+		require.Len(t, decisions, 1)
+		attr := decisions[0].StartTimerDecisionAttributes
+		require.NotNil(t, attr)
+		require.NotNil(t, attr.Priority)
+		assert.Equal(t, s.TaskPriorityAsync, *attr.Priority)
+	})
+
+	t.Run("plain NewTimer leaves priority unset", func(t *testing.T) {
+		handler := runTimerWorkflow(t, func(ctx Context) {
+			NewTimer(ctx, time.Minute)
+		})
+		decisions := handler.decisionsHelper.getDecisions(false)
+		require.Len(t, decisions, 1)
+		attr := decisions[0].StartTimerDecisionAttributes
+		require.NotNil(t, attr)
+		assert.Nil(t, attr.Priority)
+	})
+}
+
+func TestWorkflowExecutionEnvironment_ExecuteChildWorkflow_Priority(t *testing.T) {
+	handler := testWorkflowExecutionEventHandler(t, newRegistry())
+	params := executeWorkflowParams{
+		workflowOptions: workflowOptions{
+			taskListName:                        common.StringPtr("test-tasklist"),
+			executionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+			taskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+			priority:                            PriorityAsync,
+		},
+		workflowType: &WorkflowType{Name: "test-child-workflow"},
+		input:        []byte("input"),
+	}
+	err := handler.ExecuteChildWorkflow(params, func(result []byte, err error) {}, func(r WorkflowExecution, e error) {})
+	require.NoError(t, err)
+
+	decisions := handler.decisionsHelper.getDecisions(false)
+	require.Len(t, decisions, 1)
+	attr := decisions[0].StartChildWorkflowExecutionDecisionAttributes
+	require.NotNil(t, attr)
+	require.NotNil(t, attr.Priority)
+	assert.Equal(t, s.TaskPriorityAsync, *attr.Priority)
 }
 
 func testWorkflowExecutionEventHandler(t *testing.T, registry *registry) *workflowExecutionEventHandlerImpl {

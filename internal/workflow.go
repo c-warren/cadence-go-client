@@ -485,6 +485,11 @@ type (
 		// Default is Terminate (if onboarded to this feature)
 		ParentClosePolicy ParentClosePolicy
 
+		// Priority - Optional hint about how latency-sensitive the child workflow is.
+		// Set to PriorityAsync to opt the child workflow into deprioritized execution.
+		// Optional: default (PriorityUnset) leaves the priority unspecified.
+		Priority Priority
+
 		// Bugports allows opt-in enabling of older, possibly buggy behavior, primarily intended to allow temporarily
 		// emulating old behavior until a fix is deployed.
 		//
@@ -1212,6 +1217,15 @@ func NewTimer(ctx Context, d time.Duration) Future {
 	return i.NewTimer(ctx, d)
 }
 
+// NewTimerWithOptions returns immediately and the future becomes ready after the specified duration d.
+// It behaves like NewTimer, but additionally accepts options such as WithPriority to customize the timer.
+func NewTimerWithOptions(ctx Context, d time.Duration, options ...TimerOption) Future {
+	opts := resolveTimerOptions(options)
+	ctx = withTimerPriority(ctx, opts.priority)
+	i := getWorkflowInterceptor(ctx)
+	return i.NewTimer(ctx, d)
+}
+
 func (wc *workflowEnvironmentInterceptor) NewTimer(ctx Context, d time.Duration) Future {
 	future, settable := NewFuture(ctx)
 	if d <= 0 {
@@ -1219,9 +1233,10 @@ func (wc *workflowEnvironmentInterceptor) NewTimer(ctx Context, d time.Duration)
 		return future
 	}
 
+	priority := getTimerPriority(ctx)
 	ctxDone, cancellable := ctx.Done().(*channelImpl)
 	cancellationCallback := &receiveCallback{}
-	t := wc.env.NewTimer(d, func(r []byte, e error) {
+	t := wc.env.NewTimer(d, priority, func(r []byte, e error) {
 		settable.Set(nil, e)
 		if cancellable {
 			// future is done, we don't need cancellation anymore
@@ -1255,6 +1270,13 @@ func (wc *workflowEnvironmentInterceptor) NewTimer(ctx Context, d time.Duration)
 func Sleep(ctx Context, d time.Duration) (err error) {
 	i := getWorkflowInterceptor(ctx)
 	return i.Sleep(ctx, d)
+}
+
+// SleepWithOptions pauses the current workflow for at least the duration d.
+// It behaves like Sleep, but additionally accepts options such as WithPriority to customize the timer.
+func SleepWithOptions(ctx Context, d time.Duration, options ...TimerOption) (err error) {
+	t := NewTimerWithOptions(ctx, d, options...)
+	return t.Get(ctx, nil)
 }
 
 func (wc *workflowEnvironmentInterceptor) Sleep(ctx Context, d time.Duration) (err error) {
@@ -1426,6 +1448,7 @@ func WithChildWorkflowOptions(ctx Context, cwo ChildWorkflowOptions) Context {
 	wfOptions.memo = cwo.Memo
 	wfOptions.searchAttributes = cwo.SearchAttributes
 	wfOptions.parentClosePolicy = cwo.ParentClosePolicy
+	wfOptions.priority = cwo.Priority
 	wfOptions.bugports = cwo.Bugports
 
 	return ctx1
